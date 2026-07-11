@@ -84,10 +84,13 @@ graciosa, informando que o recurso está indisponível em vez de falhar.
 1. Criar um projeto no GCP Sandbox (gratuito, sem cartão de crédito).
 2. Criar uma service account com papel **BigQuery Admin** nesse projeto.
 3. Baixar a chave JSON da service account.
-4. Apontar `GOOGLE_APPLICATION_CREDENTIALS` para o caminho do arquivo (uso
+4. Preencher `GCP_PROJECT_ID` no `.env` com o id do projeto criado — sem
+   essa variável o cliente BigQuery permanece desabilitado, mesmo com a
+   credencial configurada.
+5. Apontar `GOOGLE_APPLICATION_CREDENTIALS` para o caminho do arquivo (uso
    local) ou colar o conteúdo em `GCP_SERVICE_ACCOUNT_JSON` (uso no
    Streamlit Cloud, onde não há sistema de arquivos persistente).
-5. Rodar `uv run python -m etl.pipeline` para carregar o dataset
+6. Rodar `uv run python -m etl.pipeline` para carregar o dataset
    `rh_analytics` (tabela `agregados_mensais`) no BigQuery.
 
 ## Dados
@@ -103,6 +106,7 @@ de nenhuma empresa é usado ou referenciado em nenhum ponto do projeto.
 - [uv](https://github.com/astral-sh/uv) (gestão de ambiente e dependências)
 - [mcp](https://modelcontextprotocol.io/) / FastMCP (servidor MCP stdio)
 - [LangGraph](https://langchain-ai.github.io/langgraph/) (orquestração do agente ReAct)
+- langchain-mcp-adapters (cliente MCP do agente)
 - langchain-openai (gpt-4o-mini)
 - langchain-community / FAISS (RAG)
 - pandas (ETL)
