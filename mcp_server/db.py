@@ -17,12 +17,14 @@ def consultar_batidas(
 ) -> str:
     try:
         conn = _conectar(db_path)
+    except Exception as exc:  # noqa: BLE001 — tool nunca vaza traceback
+        return f"Erro ao consultar batidas: {type(exc).__name__}. Tente novamente."
+    try:
         colab = conn.execute(
             "SELECT id, nome FROM colaboradores WHERE nome LIKE ? AND id != 1",
             (f"%{nome_colaborador}%",),
         ).fetchone()
         if colab is None:
-            conn.close()
             return (f"Não encontrei colaborador com nome parecido com "
                     f"'{nome_colaborador}' na equipe.")
         linhas = conn.execute(
@@ -33,7 +35,6 @@ def consultar_batidas(
                ORDER BY data""",
             (colab["id"], data_inicio, data_fim),
         ).fetchall()
-        conn.close()
         if not linhas:
             return (f"{colab['nome']} não tem batidas registradas entre "
                     f"{data_inicio} e {data_fim}.")
@@ -48,17 +49,21 @@ def consultar_batidas(
         return "\n".join(saida)
     except Exception as exc:  # noqa: BLE001 — tool nunca vaza traceback
         return f"Erro ao consultar batidas: {type(exc).__name__}. Tente novamente."
+    finally:
+        conn.close()
 
 
 def listar_ajustes_pendentes(db_path: str | None = None) -> str:
     try:
         conn = _conectar(db_path)
+    except Exception as exc:  # noqa: BLE001
+        return f"Erro ao listar ajustes: {type(exc).__name__}. Tente novamente."
+    try:
         linhas = conn.execute(
             """SELECT a.id, c.nome, a.data, a.campo, a.valor_proposto, a.motivo
                FROM ajustes a JOIN colaboradores c ON c.id = a.colaborador_id
                WHERE a.status = 'pendente' ORDER BY a.data""",
         ).fetchall()
-        conn.close()
         if not linhas:
             return "Não há ajustes de ponto pendentes de aprovação. 🎉"
         saida = [f"Há {len(linhas)} ajuste(s) pendente(s):"]
@@ -69,6 +74,8 @@ def listar_ajustes_pendentes(db_path: str | None = None) -> str:
         return "\n".join(saida)
     except Exception as exc:  # noqa: BLE001
         return f"Erro ao listar ajustes: {type(exc).__name__}. Tente novamente."
+    finally:
+        conn.close()
 
 
 def aprovar_ajuste(
@@ -76,18 +83,18 @@ def aprovar_ajuste(
 ) -> str:
     try:
         conn = _conectar(db_path)
+    except Exception as exc:  # noqa: BLE001
+        return f"Erro ao aprovar ajuste: {type(exc).__name__}. Nada foi gravado."
+    try:
         ajuste = conn.execute(
             "SELECT * FROM ajustes WHERE id = ?", (ajuste_id,)).fetchone()
         if ajuste is None:
-            conn.close()
             return f"Não encontrei ajuste com id {ajuste_id}."
         if ajuste["status"] != "pendente":
-            conn.close()
             return f"O ajuste #{ajuste_id} já foi processado (status: {ajuste['status']})."
 
         campo = ajuste["campo"]
         if campo not in ("entrada", "saida_almoco", "volta_almoco", "saida"):
-            conn.close()
             return f"Campo de ajuste inválido: {campo}."
         conn.execute(
             f"UPDATE batidas SET {campo} = ? WHERE colaborador_id = ? AND data = ?",
@@ -98,9 +105,10 @@ def aprovar_ajuste(
                VALUES (?, 'aprovado', ?, 'Ana Souza (gestora)', ?)""",
             (ajuste_id, justificativa, datetime.now(timezone.utc).isoformat()))
         conn.commit()
-        conn.close()
         return (f"Ajuste #{ajuste_id} aprovado: '{campo}' corrigido para "
                 f"{ajuste['valor_proposto']} em {ajuste['data']}. "
                 f"Registrado na trilha de auditoria.")
     except Exception as exc:  # noqa: BLE001
         return f"Erro ao aprovar ajuste: {type(exc).__name__}. Nada foi gravado."
+    finally:
+        conn.close()
