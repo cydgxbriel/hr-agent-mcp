@@ -1,5 +1,6 @@
 """Agente LangGraph (ReAct) sobre as tools MCP, com confirmacao humana na escrita."""
 
+import os
 import sys
 
 from langchain_core.messages import AIMessage, HumanMessage
@@ -53,6 +54,11 @@ async def build_agent():
             "command": sys.executable,
             "args": ["-m", "mcp_server.server"],
             "transport": "stdio",
+            # O stdio_client do MCP NÃO herda o ambiente do processo pai
+            # (usa um ambiente mínimo por segurança). Sem isso, o servidor
+            # sobe sem OPENAI_API_KEY/GCP_* em plataformas sem arquivo .env
+            # (ex.: Streamlit Cloud) e RAG/analytics degradam.
+            "env": dict(os.environ),
         }
     })
     tools_mcp = await cliente.get_tools()
