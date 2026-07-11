@@ -22,6 +22,7 @@ Regras:
   use analytics_rh escrevendo SQL conforme o schema da tool.
 - NUNCA aprove um ajuste sem que a gestora tenha pedido explicitamente.
 - Se uma tool retornar erro ou indisponibilidade, explique com transparência.
+- Aprove um ajuste por vez: nunca chame aprovar_ajuste mais de uma vez na mesma resposta.
 """
 
 
@@ -55,6 +56,11 @@ async def build_agent():
         }
     })
     tools_mcp = await cliente.get_tools()
+    nomes = [t.name for t in tools_mcp]
+    if nomes.count("aprovar_ajuste") != 1:
+        raise RuntimeError(
+            "Esperava exatamente uma tool 'aprovar_ajuste' no servidor MCP; "
+            f"recebi: {nomes}")
     tools = [
         _com_confirmacao(t) if t.name == "aprovar_ajuste" else t
         for t in tools_mcp

@@ -31,12 +31,13 @@ def validar_sql(sql: str) -> str | None:
     limpa = sql.strip()
     if ";" in limpa:
         return "Apenas um statement é permitido (sem ';')."
-    if "--" in limpa or "/*" in limpa:
+    if "--" in limpa or "/*" in limpa or "#" in limpa:
         return "Comentários não são permitidos na consulta."
     if not limpa.upper().startswith("SELECT"):
         return "Apenas consultas SELECT são permitidas."
     if _PROIBIDOS.search(limpa):
         return "A consulta contém comandos proibidos — apenas SELECT é permitido."
+    # Fail closed: vírgula em cláusula FROM (lista de tabelas, UNNEST) é rejeitada por design.
     for segmento in _SEGMENTO_FROM.findall(limpa):
         if "," in segmento:
             return ("Lista de tabelas no FROM não é permitida. "
@@ -71,4 +72,5 @@ def analytics_rh(consulta_sql: str) -> str:
             saida.append(" | ".join(str(linha[c]) for c in colunas))
         return "\n".join(saida)
     except Exception as exc:  # noqa: BLE001 — tool nunca vaza traceback
-        return f"Erro ao consultar o BigQuery: {type(exc).__name__}: {exc}"
+        return (f"Erro ao consultar o BigQuery: {type(exc).__name__}. "
+                "Verifique a consulta e tente novamente.")

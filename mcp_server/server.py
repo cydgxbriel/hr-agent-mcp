@@ -86,6 +86,7 @@ def analytics_rh(consulta_sql: str) -> str:
     total_hora_extra_minutos INT64, batidas_incompletas INT64,
     colaboradores INT64.
     Somente SELECT é aceito; a consulta passa por validação de governança.
+    Não use WITH/CTE, ponto e vírgula nem comentários — apenas um SELECT direto.
     """
     return analytics.analytics_rh(consulta_sql)
 

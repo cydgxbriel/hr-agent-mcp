@@ -8,3 +8,4 @@ data/raw/
 .ruff_cache/
 *.egg-info/
 .streamlit/secrets.toml
+.superpowers/

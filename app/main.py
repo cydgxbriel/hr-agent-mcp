@@ -1,6 +1,7 @@
 """Chat Streamlit: gate de senha, conversa com o agente e painel de chamadas MCP."""
 
 import asyncio
+import hmac
 import os
 import uuid
 from pathlib import Path
@@ -42,7 +43,7 @@ def _gate_de_senha() -> None:
     st.caption("Demo protegida — insira a senha de acesso.")
     senha = st.text_input("Senha", type="password")
     if st.button("Entrar") and senha:
-        if senha == senha_esperada:
+        if hmac.compare_digest(senha, senha_esperada):
             st.session_state["autenticado"] = True
             st.rerun()
         st.error("Senha incorreta.")
@@ -84,9 +85,17 @@ if "thread_id" not in st.session_state:
 def _processar(entrada) -> None:
     from agent.graph import executar
 
-    with st.spinner("Consultando o agente..."):
-        resultado = loop.run_until_complete(
-            executar(agente, entrada, st.session_state.thread_id))
+    try:
+        with st.spinner("Consultando o agente..."):
+            resultado = loop.run_until_complete(
+                executar(agente, entrada, st.session_state.thread_id))
+    except Exception as exc:  # noqa: BLE001 — erro de LLM/rede não vira traceback na UI
+        st.session_state.historico.append({
+            "role": "assistant",
+            "content": (f"⚠️ Tive um problema ao processar ({type(exc).__name__}). "
+                        "Tente novamente em instantes."),
+        })
+        return
     if resultado["chamadas_mcp"]:
         st.session_state.chamadas_mcp.append(resultado["chamadas_mcp"])
     st.session_state.interrupt_pendente = resultado["interrupt"]
@@ -138,18 +147,19 @@ if st.session_state.interrupt_pendente:
         if col1.button("✅ Confirmar aprovação", type="primary"):
             from langgraph.types import Command
 
-            st.session_state.interrupt_pendente = None
             _processar(Command(resume="confirmar"))
             st.rerun()
         if col2.button("❌ Cancelar"):
             from langgraph.types import Command
 
-            st.session_state.interrupt_pendente = None
             _processar(Command(resume="cancelar"))
             st.rerun()
 
-pergunta = st.chat_input("Pergunte sobre ponto, políticas, ajustes ou analytics...")
-if pergunta:
-    st.session_state.historico.append({"role": "user", "content": pergunta})
-    _processar(pergunta)
-    st.rerun()
+if st.session_state.interrupt_pendente:
+    st.chat_input("Confirme ou cancele a aprovação acima para continuar.", disabled=True)
+else:
+    pergunta = st.chat_input("Pergunte sobre ponto, políticas, ajustes ou analytics...")
+    if pergunta:
+        st.session_state.historico.append({"role": "user", "content": pergunta})
+        _processar(pergunta)
+        st.rerun()

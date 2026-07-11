@@ -54,3 +54,9 @@ def test_aceita_tabela_qualificada_com_projeto():
     sql = ("SELECT equipe FROM `meu-projeto.rh_analytics.agregados_mensais` "
            "GROUP BY equipe")
     assert validar_sql(sql) is None
+
+
+def test_rejeita_comentario_cerquilha():
+    erro = validar_sql(
+        "SELECT equipe FROM rh_analytics.agregados_mensais # comentario")
+    assert erro is not None

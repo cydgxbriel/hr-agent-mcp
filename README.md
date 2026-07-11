@@ -82,7 +82,9 @@ graciosa, informando que o recurso está indisponível em vez de falhar.
 ## BigQuery (opcional)
 
 1. Criar um projeto no GCP Sandbox (gratuito, sem cartão de crédito).
-2. Criar uma service account com papel **BigQuery Admin** nesse projeto.
+2. Criar uma service account com papéis **BigQuery Data Editor** + **BigQuery
+   Job User** nesse projeto (Data Editor cria datasets; Job User executa
+   jobs de carga/consultas — privilégio mínimo).
 3. Baixar a chave JSON da service account.
 4. Preencher `GCP_PROJECT_ID` no `.env` com o id do projeto criado — sem
    essa variável o cliente BigQuery permanece desabilitado, mesmo com a

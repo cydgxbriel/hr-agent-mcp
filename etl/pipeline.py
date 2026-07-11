@@ -22,7 +22,10 @@ def main() -> None:
     print("[3/3] Load: SQLite + BigQuery...")
     db_path = os.environ.get("HR_DB_PATH", "data/hr.db")
     carregar_sqlite(dados, enriquecidas, db_path)
-    carregar_bigquery(agregados)
+    try:
+        carregar_bigquery(agregados)
+    except Exception as exc:  # noqa: BLE001 — BigQuery fora do ar não pode derrubar o app
+        print(f"BigQuery: falha na carga ({type(exc).__name__}) — seguindo sem analytics.")
     print(f"Pipeline concluido. SQLite em {db_path}.")
 
 
