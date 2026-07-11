@@ -16,6 +16,15 @@ SCHEMA_AGREGADOS = (
 _PROIBIDOS = re.compile(
     r"\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|MERGE|TRUNCATE|GRANT)\b", re.IGNORECASE)
 _REF_TABELA = re.compile(r"\b(?:FROM|JOIN)\s+([`\w.\-]+)", re.IGNORECASE)
+_SEGMENTO_FROM = re.compile(
+    r"\bFROM\s+(.*?)(?=\b(?:WHERE|GROUP|ORDER|LIMIT|HAVING|QUALIFY|WINDOW|JOIN|UNION)\b|$)",
+    re.IGNORECASE | re.DOTALL,
+)
+
+
+def _tabela_permitida(referencia: str) -> bool:
+    limpa = referencia.replace("`", "")
+    return limpa == TABELA_PERMITIDA or limpa.endswith("." + TABELA_PERMITIDA)
 
 
 def validar_sql(sql: str) -> str | None:
@@ -28,12 +37,16 @@ def validar_sql(sql: str) -> str | None:
         return "Apenas consultas SELECT são permitidas."
     if _PROIBIDOS.search(limpa):
         return "A consulta contém comandos proibidos — apenas SELECT é permitido."
-    tabelas = {t.strip("`") for t in _REF_TABELA.findall(limpa)}
+    for segmento in _SEGMENTO_FROM.findall(limpa):
+        if "," in segmento:
+            return ("Lista de tabelas no FROM não é permitida. "
+                    f"Use apenas {TABELA_PERMITIDA}.")
+    tabelas = _REF_TABELA.findall(limpa)
     if not tabelas:
         return f"A consulta precisa referenciar a tabela {TABELA_PERMITIDA}."
     for tabela in tabelas:
-        if not tabela.endswith("agregados_mensais") or "rh_analytics" not in tabela:
-            return (f"Tabela '{tabela}' não permitida. "
+        if not _tabela_permitida(tabela):
+            return (f"Tabela '{tabela.replace('`', '')}' não permitida. "
                     f"Use apenas {TABELA_PERMITIDA}.")
     return None
 

@@ -37,3 +37,20 @@ def test_degrada_sem_credencial(monkeypatch):
     resultado = analytics_rh(
         "SELECT equipe FROM rh_analytics.agregados_mensais")
     assert "indisponível" in resultado.lower() or "indisponivel" in resultado.lower()
+
+
+def test_rejeita_lista_de_tabelas_no_from():
+    erro = validar_sql(
+        "SELECT * FROM rh_analytics.agregados_mensais, outro_dataset.tabela")
+    assert erro is not None
+
+
+def test_rejeita_dataset_parecido():
+    erro = validar_sql("SELECT * FROM notrh_analytics.my_agregados_mensais")
+    assert erro is not None
+
+
+def test_aceita_tabela_qualificada_com_projeto():
+    sql = ("SELECT equipe FROM `meu-projeto.rh_analytics.agregados_mensais` "
+           "GROUP BY equipe")
+    assert validar_sql(sql) is None
