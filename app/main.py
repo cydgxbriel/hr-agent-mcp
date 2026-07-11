@@ -118,7 +118,7 @@ with st.sidebar:
                 st.json(chamada["args"])
     st.divider()
     st.caption("Persona: **Ana Souza — Gestora de RH** · dados sintéticos · "
-               "[código no GitHub](https://github.com/)")
+               "[código no GitHub](https://github.com/cydgxbriel/hr-agent-mcp)")
 
 # ---------- Chat ----------
 st.title("🕐 HR Agent MCP")

@@ -3,7 +3,7 @@
 Agente conversacional de RH que substitui telas estáticas de sistema de ponto
 por uma interface de conversa — com **MCP**, **LangGraph**, **RAG** e **BigQuery**.
 
-**🔗 Demo online:** <link Streamlit Cloud> (senha: solicitar) · **CI:** <badge>
+**🔗 Demo online:** <link Streamlit Cloud> (senha: solicitar) · [![CI](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml)
 
 ## O que ele faz
 
@@ -66,7 +66,7 @@ considerada concluída: o agente nunca escreve silenciosamente.
 ## Rodando localmente
 
 ```bash
-git clone <repo>
+git clone https://github.com/cydgxbriel/hr-agent-mcp.git
 cd hr-agent-mcp
 cp .env.example .env       # preencher OPENAI_API_KEY
 uv sync
