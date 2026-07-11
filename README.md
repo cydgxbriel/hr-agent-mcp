@@ -115,5 +115,5 @@ de nenhuma empresa é usado ou referenciado em nenhum ponto do projeto.
 - Faker (geração de dados sintéticos)
 - google-cloud-bigquery
 - Streamlit (interface de chat)
-- pytest (27 testes)
+- pytest (28 testes)
 - ruff (lint)
