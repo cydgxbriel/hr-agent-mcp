@@ -3,7 +3,7 @@
 Agente conversacional de RH que substitui telas estáticas de sistema de ponto
 por uma interface de conversa — com **MCP**, **LangGraph**, **RAG** e **BigQuery**.
 
-**🔗 Demo online:** <link Streamlit Cloud> (senha: solicitar) · [![CI](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml)
+**🔗 Demo online:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) (senha: solicitar) · [![CI](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml)
 
 ## O que ele faz
 
@@ -23,7 +23,9 @@ O agente atende quatro tipos de pedido em linguagem natural, todos via chat:
   mais horas extras por mês?") geram SQL via LLM, que passa por uma camada
   de governança antes de tocar o warehouse.
 
-GIF da demo aqui.
+▶️ **Experimente ao vivo:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) — ou veja o [roteiro de 3 minutos](DEMO.md).
+
+<!-- TODO: gravar GIF da demo (ex.: ScreenToGif) e referenciar como ![Demo](docs/demo.gif) -->
 
 ## Arquitetura
 
@@ -61,7 +63,18 @@ considerada concluída: o agente nunca escreve silenciosamente.
 | RAG (FAISS + embeddings) | `rag/index.py`, `data/politicas/` |
 | ETL (extract→transform→load) | `etl/` |
 | BigQuery + governança de SQL | `mcp_server/analytics.py`, `core/bq.py` |
+| Avaliação do agente (evals) | `evals/`, [`EVALS.md`](EVALS.md) |
 | APIs Python / testes / CI | `mcp_server/db.py`, `tests/`, `.github/workflows/` |
+
+## Avaliação (evals)
+
+O agente é avaliado ponta a ponta por uma suíte de 28 casos em 8 categorias
+(roteamento, operacional, políticas, analytics, gate de escrita, governança,
+desambiguação e cruzamento de fontes), com scoring em duas camadas —
+determinístico (tool escolhida, regex, estado do gate) e LLM-as-judge para o
+que o match de string não cobre. Casos de escrita rodam contra uma cópia
+isolada do banco. Rode com `uv run python -m evals.run`; os resultados ficam
+em [`EVALS.md`](EVALS.md).
 
 ## Rodando localmente
 
