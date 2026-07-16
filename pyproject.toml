@@ -1,7 +1,7 @@
 [project]
 name = "hr-agent-mcp"
 version = "0.1.0"
-description = "Agente conversacional de RH com MCP, LangGraph, RAG e BigQuery"
+description = "Conversational HR agent with MCP, LangGraph, RAG and BigQuery"
 requires-python = ">=3.11"
 dependencies = [
     "streamlit>=1.40",

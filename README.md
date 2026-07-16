@@ -1,132 +1,132 @@
 # 🕐 HR Agent MCP
 
-Agente conversacional de RH que substitui telas estáticas de sistema de ponto
-por uma interface de conversa — com **MCP**, **LangGraph**, **RAG** e **BigQuery**.
+Conversational HR agent that replaces static time-tracking screens with a chat
+interface — built with **MCP**, **LangGraph**, **RAG** and **BigQuery**.
 
-**🔗 Demo online:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) (senha: solicitar) · [![CI](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml)
+**🔗 Live demo:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) (password: on request) · [![CI](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/cydgxbriel/hr-agent-mcp/actions/workflows/ci.yml)
 
-## O que ele faz
+## What it does
 
-O agente atende quatro tipos de pedido em linguagem natural, todos via chat:
+The agent handles four kinds of natural-language requests, all through chat:
 
-- **Consulta de batidas** — "como foram as batidas da Ana nas últimas duas
-  semanas?" retorna o histórico, com atrasos e batidas incompletas
-  destacados.
-- **Dúvidas de política, com fonte** — "qual a tolerância de atraso?" é
-  respondido com RAG sobre as políticas de RH da empresa, citando o
-  documento de origem, não apenas um resumo genérico.
-- **Aprovação de ajuste com confirmação humana** — pedidos de escrita (por
-  exemplo, aprovar um ajuste de ponto) passam por um card de confirmação
-  explícito antes de qualquer alteração no banco, e ficam registrados em
-  trilha de auditoria.
-- **Analytics no BigQuery** — perguntas analíticas ("qual equipe acumulou
-  mais horas extras por mês?") geram SQL via LLM, que passa por uma camada
-  de governança antes de tocar o warehouse.
+- **Time-punch queries** — "how were Ana's punches over the last two weeks?"
+  returns the history, with late arrivals and incomplete punches highlighted.
+- **Policy questions, with sources** — "what is the lateness tolerance?" is
+  answered with RAG over the company's HR policies, citing the source document
+  rather than a generic summary.
+- **Adjustment approval with human confirmation** — write requests (for example,
+  approving a time-punch adjustment) go through an explicit confirmation card
+  before anything changes in the database, and are recorded in an audit trail.
+- **Analytics on BigQuery** — analytical questions ("which team accumulated the
+  most overtime per month?") generate SQL via LLM, which passes through a
+  governance layer before touching the warehouse.
 
-▶️ **Experimente ao vivo:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) — ou veja o [roteiro de 3 minutos](DEMO.md).
+▶️ **Try it live:** [hr-agent-mcp-cyd.streamlit.app](https://hr-agent-mcp-cyd.streamlit.app/) — or follow the [3-minute walkthrough](DEMO.md).
 
-<!-- TODO: gravar GIF da demo (ex.: ScreenToGif) e referenciar como ![Demo](docs/demo.gif) -->
-
-## Arquitetura
+## Architecture
 
 ```mermaid
 flowchart TD
-    UI[Streamlit — chat + painel MCP] --> AG[LangGraph — agente ReAct\nmemória + human-in-the-loop]
-    AG -->|MCP stdio| SRV[Servidor MCP — FastMCP]
-    SRV --> T1[consultar_batidas] --> DB[(SQLite\noperacional)]
-    SRV --> T2[listar/aprovar ajustes] --> DB
+    UI[Streamlit — chat + MCP panel] --> AG[LangGraph — ReAct agent\nmemory + human-in-the-loop]
+    AG -->|MCP stdio| SRV[MCP server — FastMCP]
+    SRV --> T1[consultar_batidas] --> DB[(SQLite\noperational)]
+    SRV --> T2[list/approve adjustments] --> DB
     T2 --> AUD[(audit_log)]
-    SRV --> T3[consultar_politica] --> RAG[FAISS — políticas de RH]
+    SRV --> T3[consultar_politica] --> RAG[FAISS — HR policies]
     SRV --> T4[analytics_rh] --> BQ[(BigQuery\nrh_analytics)]
-    ETL[ETL Python\nextract→transform→load] --> DB
+    ETL[Python ETL\nextract→transform→load] --> DB
     ETL --> BQ
 ```
 
-O sistema separa deliberadamente dois mundos: o **operacional** (SQLite,
-leitura e escrita, latência baixa, dados do dia a dia como batidas e
-ajustes) e o **analítico** (BigQuery, somente leitura, dados agregados para
-perguntas de gestão). Essa separação evita que consultas analíticas pesadas
-concorram com o caminho transacional e mantém o warehouse como uma cópia
-derivada e auditável, nunca como fonte de verdade para escrita. Por isso
-toda operação de escrita — hoje, aprovar um ajuste de ponto — passa por
-`interrupt` (o grafo pausa e devolve o controle à interface, que exige
-confirmação humana explícita) e é registrada em `audit_log` antes de ser
-considerada concluída: o agente nunca escreve silenciosamente.
+The system deliberately separates two worlds: the **operational** side (SQLite,
+read-write, low latency, day-to-day data such as punches and adjustments) and the
+**analytical** side (BigQuery, read-only, aggregated data for management
+questions). This separation keeps heavy analytical queries from competing with
+the transactional path, and keeps the warehouse as a derived, auditable copy —
+never a source of truth for writes.
 
-## Capacidades demonstradas
+## Technical decisions
 
-| Capacidade | Onde está no código |
+- **Tools behind an MCP server (stdio)** rather than in-process functions: the
+  agent and the tool layer evolve independently, and any MCP-compatible client
+  can reuse the same server.
+- **Every write goes through `interrupt`** — the graph pauses and hands control
+  back to the UI, which requires explicit human confirmation — and is recorded
+  in `audit_log` before it counts as done. The agent never writes silently.
+- **LLM-generated SQL passes a governance layer** before touching BigQuery,
+  instead of trusting the model with raw warehouse access.
+- **Two-layer eval scoring** — deterministic checks (tool choice, regex, gate
+  state) plus LLM-as-judge only for what string matching cannot cover.
+
+## Capabilities demonstrated
+
+| Capability | Where in the code |
 |---|---|
-| MCP (servidor + client) | `mcp_server/server.py`, `agent/graph.py` |
-| Orquestração de agente (LangGraph) | `agent/graph.py` |
+| MCP (server + client) | `mcp_server/server.py`, `agent/graph.py` |
+| Agent orchestration (LangGraph) | `agent/graph.py` |
 | Human-in-the-loop (interrupt) | `agent/graph.py` (`_com_confirmacao`) |
 | RAG (FAISS + embeddings) | `rag/index.py`, `data/politicas/` |
 | ETL (extract→transform→load) | `etl/` |
-| BigQuery + governança de SQL | `mcp_server/analytics.py`, `core/bq.py` |
-| Avaliação do agente (evals) | `evals/`, [`EVALS.md`](EVALS.md) |
-| APIs Python / testes / CI | `mcp_server/db.py`, `tests/`, `.github/workflows/` |
+| BigQuery + SQL governance | `mcp_server/analytics.py`, `core/bq.py` |
+| Agent evaluation (evals) | `evals/`, [`EVALS.md`](EVALS.md) |
+| Python APIs / tests / CI | `mcp_server/db.py`, `tests/`, `.github/workflows/` |
 
-## Avaliação (evals)
+## Evaluation (evals)
 
-O agente é avaliado ponta a ponta por uma suíte de 28 casos em 8 categorias
-(roteamento, operacional, políticas, analytics, gate de escrita, governança,
-desambiguação e cruzamento de fontes), com scoring em duas camadas —
-determinístico (tool escolhida, regex, estado do gate) e LLM-as-judge para o
-que o match de string não cobre. Casos de escrita rodam contra uma cópia
-isolada do banco. Rode com `uv run python -m evals.run`; os resultados ficam
-em [`EVALS.md`](EVALS.md).
+The agent is evaluated end-to-end by a 28-case suite across 8 categories
+(routing, operational, policies, analytics, write gate, governance,
+disambiguation and cross-source questions), with two-layer scoring —
+deterministic (tool chosen, regex, gate state) plus LLM-as-judge for what string
+matching cannot cover. Write cases run against an isolated copy of the database.
+Run with `uv run python -m evals.run`; results live in [`EVALS.md`](EVALS.md).
 
-## Rodando localmente
+## Running locally
 
 ```bash
-git clone https://github.com/cydgxbriel/hr-agent-mcp.git
-cd hr-agent-mcp
-cp .env.example .env       # preencher OPENAI_API_KEY
-uv sync
-uv run python -m etl.pipeline
-uv run streamlit run app/main.py
+git clone https://github.com/cydgxbriel/hr-agent-mcp.git && cd hr-agent-mcp
+cp .env.example .env && uv sync        # fill in OPENAI_API_KEY
+uv run python -m etl.pipeline && uv run streamlit run app/main.py
 ```
 
-`APP_PASSWORD` é opcional em desenvolvimento (protege o app quando exposto
-publicamente). BigQuery também é opcional: sem credencial configurada, o
-agente segue funcionando normalmente e a tool de analytics degrada de forma
-graciosa, informando que o recurso está indisponível em vez de falhar.
+`APP_PASSWORD` is optional in development (it protects the app when publicly
+exposed). BigQuery is optional too: without configured credentials the agent
+keeps working and the analytics tool degrades gracefully, reporting the feature
+as unavailable instead of failing.
 
-## BigQuery (opcional)
+## BigQuery (optional)
 
-1. Criar um projeto no GCP Sandbox (gratuito, sem cartão de crédito).
-2. Criar uma service account com papéis **BigQuery Data Editor** + **BigQuery
-   Job User** nesse projeto (Data Editor cria datasets; Job User executa
-   jobs de carga/consultas — privilégio mínimo).
-3. Baixar a chave JSON da service account.
-4. Preencher `GCP_PROJECT_ID` no `.env` com o id do projeto criado — sem
-   essa variável o cliente BigQuery permanece desabilitado, mesmo com a
-   credencial configurada.
-5. Apontar `GOOGLE_APPLICATION_CREDENTIALS` para o caminho do arquivo (uso
-   local) ou colar o conteúdo em `GCP_SERVICE_ACCOUNT_JSON` (uso no
-   Streamlit Cloud, onde não há sistema de arquivos persistente).
-6. Rodar `uv run python -m etl.pipeline` para carregar o dataset
-   `rh_analytics` (tabela `agregados_mensais`) no BigQuery.
+1. Create a project in the GCP Sandbox (free, no credit card).
+2. Create a service account with **BigQuery Data Editor** + **BigQuery Job
+   User** roles in that project (Data Editor creates datasets; Job User runs
+   load jobs and queries — least privilege).
+3. Download the service account's JSON key.
+4. Set `GCP_PROJECT_ID` in `.env` to the new project id — without this variable
+   the BigQuery client stays disabled even with credentials configured.
+5. Point `GOOGLE_APPLICATION_CREDENTIALS` at the key file path (local use) or
+   paste the file contents into `GCP_SERVICE_ACCOUNT_JSON` (Streamlit Cloud,
+   which has no persistent filesystem).
+6. Run `uv run python -m etl.pipeline` to load the `rh_analytics` dataset
+   (table `agregados_mensais`) into BigQuery.
 
-## Dados
+## Data
 
-Todos os dados são 100% sintéticos, gerados com Faker (seed 42): colaboradores,
-batidas de ponto, ajustes e políticas de RH são personas e documentos
-fictícios, criados exclusivamente para esta demonstração. Nenhum dado real
-de nenhuma empresa é usado ou referenciado em nenhum ponto do projeto.
+All data is 100% synthetic, generated with Faker (seed 42): employees, time
+punches, adjustments and HR policies are fictional personas and documents
+created exclusively for this demonstration. No real data from any company is
+used or referenced anywhere in the project.
 
 ## Stack
 
 - Python 3.11+
-- [uv](https://github.com/astral-sh/uv) (gestão de ambiente e dependências)
-- [mcp](https://modelcontextprotocol.io/) / FastMCP (servidor MCP stdio)
-- [LangGraph](https://langchain-ai.github.io/langgraph/) (orquestração do agente ReAct)
-- langchain-mcp-adapters (cliente MCP do agente)
-- langchain-openai (gpt-4o-mini)
-- langchain-community / FAISS (RAG)
-- pandas (ETL)
-- Faker (geração de dados sintéticos)
-- google-cloud-bigquery
-- Streamlit (interface de chat)
-- pytest (28 testes)
+- [uv](https://github.com/astral-sh/uv) (environment and dependency management)
+- [mcp](https://modelcontextprotocol.io/) ≥1.2 / FastMCP (stdio MCP server)
+- [LangGraph](https://langchain-ai.github.io/langgraph/) ≥0.2.60 (ReAct agent orchestration)
+- langchain-mcp-adapters ≥0.1 (the agent's MCP client)
+- langchain-openai ≥0.2.10 (gpt-4o-mini)
+- langchain-community ≥0.3.10 / FAISS ≥1.8 (RAG)
+- pandas ≥2.2 (ETL)
+- Faker ≥30 (synthetic data generation)
+- google-cloud-bigquery ≥3.25
+- Streamlit ≥1.40 (chat interface)
+- pytest ≥8 (28 tests)
 - ruff (lint)
