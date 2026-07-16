@@ -128,5 +128,5 @@ used or referenced anywhere in the project.
 - Faker ≥30 (synthetic data generation)
 - google-cloud-bigquery ≥3.25
 - Streamlit ≥1.40 (chat interface)
-- pytest ≥8 (28 tests)
+- pytest ≥8 (35 tests)
 - ruff (lint)

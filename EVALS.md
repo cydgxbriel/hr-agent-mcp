@@ -1,40 +1,40 @@
-# 🧪 Avaliação do agente (evals)
+# 🧪 Agent evaluation (evals)
 
-Suíte de avaliação ponta a ponta do agente de RH: cada caso roda contra o
-agente real (LangGraph → servidor MCP → SQLite/RAG/BigQuery → LLM), não mocks.
-As asserções são ancoradas nos dados sintéticos gerados com seed 42.
+End-to-end evaluation suite for the HR agent: each case runs against the
+real agent (LangGraph → MCP server → SQLite/RAG/BigQuery → LLM), not mocks.
+Assertions are anchored to the synthetic data generated with seed 42.
 
-## Como rodar
+## How to run
 
 ```bash
-uv run python -m evals.run            # determinístico + LLM-as-judge
-uv run python -m evals.run --sem-juiz # só a camada determinística
+uv run python -m evals.run            # deterministic + LLM-as-judge
+uv run python -m evals.run --sem-juiz # deterministic layer only
 ```
 
-Precisa de `OPENAI_API_KEY` (agente + juiz) e, para a categoria *analytics*,
-das credenciais de BigQuery no `.env`. Não roda na CI (consome API + segredos);
-é um harness manual e estes resultados são versionados.
+Needs `OPENAI_API_KEY` (agent + judge) and, for the *analytics* category,
+BigQuery credentials in `.env`. Doesn't run in CI (consumes API + secrets);
+it's a manual harness and these results are version-controlled.
 
-## Camadas de avaliação
+## Evaluation layers
 
-- **Determinística** — qual tool MCP foi chamada, substrings/regex na resposta,
-  e o estado do gate de confirmação (interrupt). Barata e reprodutível.
-- **LLM-as-judge** — um `gpt-4o-mini` juiz avalia a resposta contra uma rubrica
-  em linguagem natural, só onde o match de string seria frágil demais.
+- **Deterministic** — which MCP tool was called, substrings/regex in the response,
+  and the confirmation gate state (interrupt). Cheap and reproducible.
+- **LLM-as-judge** — a `gpt-4o-mini` judge evaluates the response against a
+  natural-language rubric, only where string matching would be too fragile.
 
-Um caso passa quando **todas** as suas checagens passam. Casos marcados como
-*esforço* exercitam limites conhecidos (ex.: desambiguação de nomes, raciocínio
-cruzando política + dados) e podem falhar de propósito — são sinal, não ruído.
-
-
-## Resultados
-
-**Acurácia geral:** 26/28 (93%) · **juiz:** sim · **latência total:** 374s · **rodado em:** 2026-07-11
+A case passes when **all** of its checks pass. Cases marked as
+*stretch* exercise known limits (e.g., name disambiguation, reasoning
+across policy + data) and may fail on purpose — they're signal, not noise.
 
 
-### Por categoria
+## Results
 
-| Categoria | Passou / Total |
+**Overall accuracy:** 26/28 (93%) · **judge:** yes · **total latency:** 374s · **run on:** 2026-07-11
+
+
+### By category
+
+| Category | Passed / Total |
 |---|---|
 | analytics | 4/4 |
 | cruzamento | 1/2 |
@@ -45,9 +45,9 @@ cruzando política + dados) e podem falhar de propósito — são sinal, não ru
 | politica | 4/4 |
 | roteamento | 4/4 |
 
-### Por caso
+### By case
 
-| Caso | Categoria | Resultado | Checagens que falharam |
+| Case | Category | Result | Checks that failed |
 |---|---|---|---|
 | R1 | roteamento | ✅ | — |
 | R2 | roteamento | ✅ | — |
@@ -57,7 +57,7 @@ cruzando política + dados) e podem falhar de propósito — são sinal, não ru
 | O2 | operacional | ✅ | — |
 | O3 | operacional | ✅ | — |
 | O4 | operacional | ✅ | — |
-| D1 *(esforço)* | desambiguacao | ❌ | juiz |
+| D1 *(stretch)* | desambiguacao | ❌ | judge |
 | D2 | desambiguacao | ✅ | — |
 | D3 | desambiguacao | ✅ | — |
 | P1 | politica | ✅ | — |
@@ -72,8 +72,8 @@ cruzando política + dados) e podem falhar de propósito — são sinal, não ru
 | W2 | escrita | ✅ | — |
 | W3 | escrita | ✅ | — |
 | W4 | escrita | ✅ | — |
-| C1 *(esforço)* | cruzamento | ✅ | — |
-| C2 *(esforço)* | cruzamento | ❌ | juiz |
+| C1 *(stretch)* | cruzamento | ✅ | — |
+| C2 *(stretch)* | cruzamento | ❌ | judge |
 | G1 | governanca | ✅ | — |
 | G2 | governanca | ✅ | — |
 | G3 | governanca | ✅ | — |
